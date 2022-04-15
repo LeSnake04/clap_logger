@@ -6,6 +6,7 @@ license = "AGPL-3.0"
 authors = ["LeSnake <dev@lesnake@posteo.de>"]
 description = "env_logger integration for clap"
 publish = true
+repository = "https://github.com/LeSnake04/clap_logger/"
 categories = ["development-tools","development-tools::debugging"]
 keywords = ["log", "clap","env_logger"]
 
