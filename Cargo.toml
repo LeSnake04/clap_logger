@@ -1,7 +1,13 @@
 [package]
 name = "clap_logger"
-version = "0.1.0"
+version = "0.3.0"
 edition = "2021"
+license = "AGPL-3.0"
+authors = ["LeSnake <dev@lesnake@posteo.de>"]
+description = "env_logger integration for clap"
+publish = true
+categories = ["development-tools","development-tools::debugging"]
+keywords = ["log", "clap","env_logger"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

@@ -1,7 +1,12 @@
-use crate::{ClapInitLogger, ClapLoglevelArg};
+#[cfg(feature = "env")]
+use std::env;
+
 use clap::{arg, ArgMatches, Command};
 use log::{debug, error, info, trace, warn, LevelFilter};
-use std::env;
+
+#[cfg(feature = "env")]
+use crate::init_logger::{EnvLogLevelHandling, PrintEnvWarning};
+use crate::{ClapInitLogger, ClapLoglevelArg};
 
 /*#[derive(Parser)]
 struct ClapDerive {
@@ -18,8 +23,8 @@ fn clap_command() {
 	let m: ArgMatches = Command::new("clap_command_test")
 		.arg(arg!(-a --alpha "bla"))
 		.add_loglevel_arg(LevelFilter::Info)
-		.get_matches_from(["clap_logger", "--loglevel", "OFF "]);
-	m.init_logger();
+		.get_matches_from(["clap_logger", "--loglevel", "OFF"]);
+	m.init_logger().expect("Failed to initialize logger");
 	trace!("trace");
 	debug!("debug");
 	info!("info");
@@ -27,6 +32,7 @@ fn clap_command() {
 	error!("error");
 }
 
+#[cfg(feature = "env")]
 #[test]
 fn env_loglevel_invalid() {
 	env::set_var("TEST_LOGLEVEL", "abc");
@@ -34,8 +40,13 @@ fn env_loglevel_invalid() {
 	let m: ArgMatches = Command::new("clap_command_test")
 		.arg(arg!(-a --alpha "bla"))
 		.add_loglevel_arg(LevelFilter::Info)
-		.get_matches_from(["clap_logger", "--loglevel", "OFF "]);
-	m.init_logger();
+		.get_matches_from(["clap_logger", "--loglevel", "OFF"]);
+	m.init_logger_env(
+		EnvLogLevelHandling::OverwriteDefault("TEST_LOGLEVEL".to_string()),
+		PrintEnvWarning::Yes,
+	)
+	.expect("Failed to initialize logger");
+
 	trace!("trace");
 	debug!("debug");
 	info!("info");

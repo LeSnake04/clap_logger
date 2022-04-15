@@ -73,7 +73,7 @@ pub trait ClapInitLogger {
 	fn get_loglevel_env(
 		&self,
 		env_loglevel_handling: EnvLogLevelHandling,
-		print_hint: PrintEnvWarning,
+		print_env_warning: PrintEnvWarning,
 	) -> CLapLoggerResult<log::LevelFilter>;
 }
 

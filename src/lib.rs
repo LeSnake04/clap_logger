@@ -1,5 +1,5 @@
 //! # Clap Logger
-//! simple [env_logger][env_logger] integration for [clap][clap].
+//! Simple [env_logger][env_logger] integration for [clap][clap].
 //!
 //! This create provides a simple way to allow the user to set the log level via a command line argument.
 //! Its directly implemented in clap, so it feels very naturally.
@@ -10,7 +10,22 @@
 //! ## Features
 //! * Command line argument to set loglevel
 //! * Argument can be modified
-//! * alternative
+//! * Optional: Loglevel via Environment variables
+//! * directly embedded in `clap::Command` and `clap::ArgMatches`
+//!
+//! ## Status: Beta
+//! ### Finished
+//! * Feature complete (But Open for suggestions)
+//! * no panics
+//!
+//! ### TODO
+//! * Waiting for feedback
+//! * more tests
+//! * Complete documentation
+//! * more examples
+//!
+//! ## Backlog
+//! * Figure out if `clap_derive` support possible,
 //!
 //! ## Adding the Argument
 //! ### Base Implementation:
@@ -27,7 +42,7 @@
 //! ```
 //!
 //! ## loglevel Arg manipulation
-//! You can also get the [Arg][clap::Arg] individually in order to modify it before adding:`
+//! You can also get the [Arg][clap::Arg] directly in order to modify it before adding:`
 //! ```
 //! use clap::{arg, Arg, Command};
 //! use log::LevelFilter;
@@ -45,10 +60,10 @@
 //!     .required(true))
 //! 	.get_matches();
 //! ```
-//! Warning: Do NOT touch `.possible_values` or `.id` field of the argument  or enable multiple values and be careful not to modify the input in general.
+//! Warning: Do NOT touch `.possible_values`, `.id` field of the argument or anything in that modifies the input.
 //!
 //! ## Initialising the logger
-//!
+//! ### Base implementation:
 //! ```
 //! use clap::Command;
 //! use log::LevelFilter;
@@ -61,7 +76,7 @@
 //!
 //! m.init_logger().expect("Failed to initialize logger");
 //! ```
-//! Note: if you didnt add
+//!
 
 mod arg;
 mod init_logger;
