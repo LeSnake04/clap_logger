@@ -1,10 +1,10 @@
-#[cfg(feature = "env")]
+#[cfg(feature = "from_env")]
 use std::env;
 
 use clap::{arg, ArgMatches, Command};
 use log::{debug, error, info, trace, warn, LevelFilter};
 
-#[cfg(feature = "env")]
+#[cfg(feature = "from_env")]
 use crate::init_logger::{EnvLogLevelHandling, PrintEnvWarning};
 use crate::{ClapInitLogger, ClapLoglevelArg};
 
@@ -24,7 +24,7 @@ fn clap_command() {
 		.arg(arg!(-a --alpha "bla"))
 		.add_loglevel_arg(LevelFilter::Info)
 		.get_matches_from(["clap_logger", "--loglevel", "OFF"]);
-	m.init_logger().expect("Failed to initialize logger");
+	m.init_env_logger().expect("Failed to initialize logger");
 	trace!("trace");
 	debug!("debug");
 	info!("info");
@@ -32,7 +32,7 @@ fn clap_command() {
 	error!("error");
 }
 
-#[cfg(feature = "env")]
+#[cfg(feature = "from_env")]
 #[test]
 fn env_loglevel_invalid() {
 	env::set_var("TEST_LOGLEVEL", "abc");

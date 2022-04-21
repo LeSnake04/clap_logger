@@ -4,86 +4,66 @@
 //! This create provides a simple way to allow the user to set the log level via a command line argument.
 //! Its directly implemented in clap, so it feels very naturally.
 //!
-//! Please note this crate does not support `clap_derive` and won't support it in the near future or possibly never,
-//! since Integrating with it is very hard to do.
+//! Please note this crate does not support `clap_derive` yet.
 //!
 //! ## Features
 //! * Command line argument to set loglevel
+//! * No Panics
 //! * Argument can be modified
 //! * Optional: Loglevel via Environment variables
 //! * directly embedded in `clap::Command` and `clap::ArgMatches`
-//!
-//! ## Status: Beta
-//! ### Finished
-//! * Feature complete (But Open for suggestions)
-//! * no panics
-//!
-//! ### TODO
-//! * Waiting for feedback
-//! * more tests
-//! * Complete documentation
-//! * more examples
-//!
-//! ## Backlog
-//! * Figure out if `clap_derive` support possible,
-//!
-//! ## Adding the Argument
-//! ### Base Implementation:
-//! ```
-//! use clap::Command;
-//! use log::LevelFilter;
-//! use clap_logger::{ClapInitLogger, ClapLoglevelArg};
-//!
-//! // Generate a clap command
-//! let m: clap::ArgMatches = Command::new("clap_command_test")//!
-//!   // add loglevel argument
-//!		.add_loglevel_arg()
-//! 	.get_matches();
-//! ```
-//!
-//! ## loglevel Arg manipulation
-//! You can also get the [Arg][clap::Arg] directly in order to modify it before adding:`
-//! ```
-//! use clap::{arg, Arg, Command};
-//! use log::LevelFilter;
-//! use clap_logger::{ClapInitLogger, get_loglevel_arg};
-//!
-//! // Generate a clap command
-//! let m: clap::ArgMatches = Command::new("clap_command_test")
-//!   // add the add loglevel argument
-//!  	.arg(get_loglevel_arg(LevelFilter::Info)
-//! 		// Adding a short version
-//! 		.short('l')
-//!     // changing the long version of the argument just because I can
-//! 		.long("custom-loglevel")
-//!     // make it required to annoy the user
-//!     .required(true))
-//! 	.get_matches();
-//! ```
-//! Warning: Do NOT touch `.possible_values`, `.id` field of the argument or anything in that modifies the input.
 //!
 //! ## Initialising the logger
 //! ### Base implementation:
 //! ```
 //! use clap::Command;
 //! use log::LevelFilter;
-//! use clap_logger::{ClapInitLogger, ClapLoglevelArg};
+//! use clap_logger::prelude::*;
 //!
 //! let m: clap::ArgMatches = Command::new("clap_command_test")
 //!   // add the loglevel argument
 //!  	.add_loglevel_arg()
 //! 	.get_matches();//!
 //!
-//! m.init_logger().expect("Failed to initialize logger");
+//! m.init_env_logger().expect("Failed to initialize logger");
 //! ```
+//! ## Status: Beta
+//! ### Finished
+//! * Feature complete (But Open for suggestions)
+//! * no panics
 //!
+//! ### Backlog
+//! * Write More tests
+//! * Complete documentation
+//! * Write more examples.
+//! * Add `clap_derive` support.,
 
-mod arg;
-mod init_logger;
+pub mod arg;
+pub mod init_logger;
 #[cfg(test)]
 mod tests;
 
-pub use log::{debug, error, info, trace, warn, LevelFilter};
-
-pub use crate::arg::{get_loglevel_arg, ClapLoglevelArg};
+pub use crate::arg::{get_arg, ClapLoglevelArg};
 pub use crate::init_logger::ClapInitLogger;
+
+#[cfg(feature = "prelude")]
+pub mod prelude {
+	//! # Collection of imports for setting up the crate.
+	//! Also re-exports clap and log commands needed for implementation to reduce imports and dependencies.
+	//! [See start page for implementation details.][crate]
+	//! Includes
+	//! - basic clap modules (like [ArgMatches][clap::ArgMatches],[Command][clap::Command] and many more)
+	//! - essential internal modules for setting up clap_logger
+	//! - logging functions and LevelFilters
+	pub use crate::arg::{get_arg, ClapLoglevelArg};
+	pub use crate::init_logger::ClapInitLogger;
+	pub use clap::{arg, command, Arg, ArgMatches, Command};
+	pub use log::{debug, error, info, trace, warn, LevelFilter};
+}
+
+#[cfg(feature = "prelude")]
+pub mod log {
+	//! # Functions for logging.
+	//! This provides a simple way to import logging functions without extra dependencies.
+	pub use log::{debug, error, info, trace, warn};
+}

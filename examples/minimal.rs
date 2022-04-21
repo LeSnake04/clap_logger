@@ -1,10 +1,8 @@
 fn main() {
-	use clap::{arg, Arg, Command};
-	use clap_logger::{ClapInitLogger, ClapLoglevelArg};
-	use log::LevelFilter;
+	use clap_logger::prelude::*;
 
 	// Generate a clap command
-	let m: clap::ArgMatches = Command::new("clap_command_test")
+	let m: ArgMatches = Command::new("clap_command_test")
 		.arg(arg!(-a --alpha "hello world!"))
 		.arg(
 			Arg::new("input")
@@ -17,5 +15,5 @@ fn main() {
 		.add_loglevel_arg(LevelFilter::Off)
 		.get_matches();
 
-	m.init_logger().expect("Failed to initialize logger");
+	m.init_env_logger().expect("Failed to initialize logger");
 }

@@ -1,4 +1,5 @@
-#[cfg(feature = "env")]
+use log::LevelFilter;
+#[cfg(feature = "from_env")]
 use std::env::var as env_var;
 use std::str::FromStr;
 
@@ -24,7 +25,7 @@ pub enum Error {
 }
 
 /// Define what to do with the log level from the environment if one is specified.
-#[cfg(feature = "env")]
+#[cfg(feature = "from_env")]
 pub enum EnvLogLevelHandling {
 	/// # Overwrite the default_loglevel
 	/// If user specified a loglevel, use the user specified one, otherwise use the one from the environment.
@@ -45,22 +46,22 @@ pub enum EnvLogLevelHandling {
 	OverwriteArgument(String),
 }
 
-#[cfg(feature = "env")]
+#[cfg(feature = "from_env")]
 pub enum PrintEnvWarning {
 	Yes,
 	No,
 }
 
 /// # Clap Init Logger
-/// Trait TODO docs
+/// Trait which defines the functions to [initializes the logger][crate::init_logger] or get the loglevel
 pub trait ClapInitLogger {
-	fn init_logger(self) -> CLapLoggerResult<Self>
+	fn init_env_logger(self) -> CLapLoggerResult<Self>
 	where
 		Self: Sized;
 
 	fn get_loglevel(&self) -> CLapLoggerResult<log::LevelFilter>;
 
-	#[cfg(feature = "env")]
+	#[cfg(feature = "from_env")]
 	fn init_logger_env(
 		self,
 		env_loglevel_handling: EnvLogLevelHandling,
@@ -69,7 +70,7 @@ pub trait ClapInitLogger {
 	where
 		Self: Sized;
 
-	#[cfg(feature = "env")]
+	#[cfg(feature = "from_env")]
 	fn get_loglevel_env(
 		&self,
 		env_loglevel_handling: EnvLogLevelHandling,
@@ -78,56 +79,53 @@ pub trait ClapInitLogger {
 }
 
 impl ClapInitLogger for clap::ArgMatches {
-	// TODO doc
-	fn init_logger(self) -> CLapLoggerResult<Self> {
+	/// TODO doc
+	#[must_use]
+	#[cfg(feature = "env_logger")]
+	fn init_env_logger(self) -> CLapLoggerResult<Self> {
 		env_logger::builder()
 			.filter_level(self.get_loglevel()?)
 			.init();
 		Ok(self)
 	}
 
-	// TODO Doc
-	fn get_loglevel(&self) -> CLapLoggerResult<log::LevelFilter> {
-		let levelfilter = match self.value_of("loglevel") {
+	/// # Get Loglevel
+	/// TODO Doc
+	fn get_loglevel(&self) -> CLapLoggerResult<LevelFilter> {
+		let loglevel = match self.value_of("loglevel") {
 			Some(r) => r,
 			None => return Err(Error::NoLogLevelSupplied),
 		};
 
-		match log::LevelFilter::from_str(levelfilter) {
+		match LevelFilter::from_str(loglevel) {
 			Ok(r) => Ok(r),
-			Err(e) => Err(Error::CouldNotParseLogLevel(e)), // Err
+			Err(e) => Err(Error::CouldNotParseLogLevel(e)),
 		}
 	} // fn
 
-	#[cfg(feature = "env")]
+	/// TODO DOC
+	#[cfg(feature = "from_env")]
 	fn init_logger_env(
 		self,
 		env_loglevel_handling: EnvLogLevelHandling,
 		print_hint: PrintEnvWarning,
 	) -> CLapLoggerResult<Self> {
 		env_logger::builder()
-			.filter_level(self.get_loglevel(env_loglevel_handling, print_hint)?)
+			.filter_level(self.get_loglevel_env(env_loglevel_handling, print_hint)?)
 			.init();
 		Ok(self)
 	} // fn
 
-	#[cfg(feature = "env")]
+	/// TODO Doc
+	#[cfg(feature = "from_env")]
 	fn get_loglevel_env(
 		&self,
 		env_loglevel_handling: EnvLogLevelHandling,
 		print_env_warning: PrintEnvWarning,
-	) -> CLapLoggerResult<log::LevelFilter> {
+	) -> CLapLoggerResult<LevelFilter> {
 		let loglevel_set: bool = self.occurrences_of("loglevel") > 0;
 
-		let loglevel = match log::LevelFilter::from_str(match self.value_of("loglevel") {
-			Some(r) => r,
-			None => return Err(Error::NoLogLevelSupplied),
-		}) {
-			Ok(r) => r,
-			Err(e) => {
-				return Err(Error::CouldNotParseLogLevel(e));
-			} // Err
-		}; // let match
+		let loglevel: LevelFilter = self.get_loglevel()?;
 
 		////////////////////////////////
 		// Parse environment Loglevel //
