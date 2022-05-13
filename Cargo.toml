@@ -4,21 +4,26 @@ version = "0.3.1"
 edition = "2021"
 license = "AGPL-3.0"
 authors = ["LeSnake <dev@lesnake@posteo.de>"]
-description = "env_logger integration for clap"
+description = "Easy to use, yet powerfull logger integration for clap"
 publish = true
 repository = "https://github.com/LeSnake04/clap_logger/"
 categories = ["development-tools","development-tools::debugging"]
-keywords = ["log", "clap","env_logger"]
+keywords = ["log", "clap","pretty_env_logger"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 clap = "3.1"
-env_logger = "0.9"
 log = "0.4"
+log4rs = { version = "1.1.1", optional = true, features = ["console_appender", "file_appender", "rolling_file_appender"]}
 
 [features]
-default=["env_logger", "prelude"]
-from_env =[]
+default = ["minimal", "prelude", "logfile"]
+minimal = ["init_logger", "console_logger"]
+logfile_only = ["prelude", "init_logger", "logfile"]
+full = ["from_custom_env", "default"]
+from_custom_env = []
+console_logger = ["dep:log4rs"]
+logfile = ["dep:log4rs"]
 prelude = []
-env_logger=[]
+init_logger = ["dep:log4rs"]

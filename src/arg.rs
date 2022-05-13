@@ -9,7 +9,7 @@
 //! // Generate a clap command
 //! let m: ArgMatches = Command::new("clap_command_test")//!
 //!   // add loglevel argument
-//!  	.add_loglevel_arg()
+//!  	.add_logging_args()
 //! 	.get_matches();
 //! ```
 //!
@@ -34,14 +34,28 @@
 //! ```
 //! Warning: Do NOT touch [`.possible_values`][clap::], `.id` field of the argument or anything in that modifies the input.
 //!
+use clap::Command;
 use log::LevelFilter;
 
-pub mod get_arg {
+pub mod get_logging_args {
 	//! # Get an argument for logging
 	//! get an Argument for logging.
+	//! # How to use?
+	//! Call `.add_logging_args()` on you clap command.
+	//! ## or
+	//! If you want to modify the args you have to add all these arguments of this modules:
+	//! - `loglevel
+	//! - `verbose,
+	//! - `quiet
+	//! Make sure you add all of them or clap initialization will fail.
 
 	use clap::{Arg, PossibleValue};
 	use log::LevelFilter;
+
+	#[doc(hidden)]
+	fn loglevel_string(input: LevelFilter) -> String {
+		input.to_string().to_lowercase()
+	}
 
 	/// # Get LogLevel Arg
 	/// Returns a [Arg][clap::Arg], which accepts the log level via CLI
@@ -52,11 +66,6 @@ pub mod get_arg {
 	/// ## Priority
 	///
 	///
-
-	fn loglevel_string(input: LevelFilter) -> String {
-		input.to_string().to_lowercase()
-	}
-
 	pub fn loglevel<'a>(default_loglevel: LevelFilter) -> Arg<'a> {
 		Arg::new("loglevel")
 			.long("loglevel")
@@ -86,33 +95,55 @@ pub mod get_arg {
 	}
 
 	#[doc(hidden)]
-	fn get_loglevel_difference(default_loglevel: LevelFilter) -> (usize, usize) {
-		let level_filters: [&str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
-		let default_loglevel_pos: usize = level_filters
+	pub(crate) static LEVEL_FILTERS: [&str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
+
+	#[doc(hidden)]
+	pub(crate) fn get_loglevel_difference(default_loglevel: LevelFilter) -> (usize, usize) {
+		let default_loglevel_pos: usize = LEVEL_FILTERS
+			.binary_search(&default_loglevel.as_str())
+			.unwrap_or({
+				("clap_logger: Failed to get position of default loglevel, using Warn (This message will be hidden in release builds)");
+				2 as usize
+			})
+			.clamp(0,5);
+
+		(
+			LEVEL_FILTERS
+				.len()
+				.clamp(0, 5)
+				.saturating_sub(default_loglevel_pos),
+			default_loglevel_pos.saturating_sub(1),
+		)
+	}
+
+	#[doc(hidden)]
+	pub(crate) fn get_loglevel_index(default_loglevel: LevelFilter) -> usize {
+		LEVEL_FILTERS
 			.binary_search(&default_loglevel.as_str())
 			.unwrap_or({
 				println!("Verbose/Silent: Failed to get position of default loglevel, using Warn");
 				2 as usize
-			});
-
-		(
-			level_filters.len() - default_loglevel_pos,
-			default_loglevel_pos - 1,
-		)
+			})
+			.clamp(0, 5)
 	}
 
 	/// # Verbose Arg
 	/// [Arg][clap::Arg] to Increase loglevel
-	pub fn verbose<'a>(default_loglevel: LevelFilter) -> Arg<'a> {
-		let loglevel_difference: (usize, usize) = get_loglevel_difference(default_loglevel);
-		let difference_to_max: usize = loglevel_difference.1;
-
+	pub fn verbose<'a>() -> Arg<'a> {
 		Arg::new("verbose")
 			.short('v')
 			.long("verbose")
-			.help("Increase verbosity, It increases for each use")
+			.help("Increase verbosity, increases for each use")
 			.multiple_occurrences(true)
-			.max_occurrences(difference_to_max)
+	}
+
+	/// TODO Doc
+	pub fn quiet<'a>() -> Arg<'a> {
+		Arg::new("quiet")
+			.short('q')
+			.long("quiet")
+			.help("Decrease verbosity, decreases for each use")
+			.multiple_occurrences(true)
 	}
 }
 
@@ -120,17 +151,54 @@ pub mod get_arg {
 /// Trait which adds the loglevel argument.
 ///
 /// Made for [`clap::Command`][clap::Command]
-pub trait ClapLoglevelArg {
-	fn add_loglevel_arg(self, default_loglevel: LevelFilter) -> Self;
-}
-
-impl ClapLoglevelArg for clap::Command<'_> {
+pub trait ClapLogArgs {
 	/// # Add Loglevel Argument
 	/// Adds loglevel argument to the current [Command][clap::Command], which allows the user to easily change the loglevel.
 	///
 	/// ## Arguments
 	/// default_loglevel: [LevelFilter][log::LevelFilter] which will become the loglevel when no one is defined by the user.
-	fn add_loglevel_arg(self, default_loglevel: LevelFilter) -> Self {
-		self.arg(get_arg::loglevel(default_loglevel))
+	///
+	/// ## This
+	/// TODO doc
+	fn add_logging_args(self, default_loglevel: LevelFilter) -> Self;
+	/// TODO Doc
+	fn validate_logging(self) -> Self;
+}
+
+impl ClapLogArgs for Command<'_> {
+	fn add_logging_args(self, default_loglevel: LevelFilter) -> Self {
+		self.args(&[
+			get_logging_args::loglevel(default_loglevel),
+			get_logging_args::verbose(),
+			get_logging_args::quiet(),
+		])
+	}
+
+	/// TODO Doc
+	fn validate_logging<'help>(self) -> Self {
+		let log_args = ["loglevel", "verbose", "quiet"];
+		let mut log_arg_bool: [bool; 3] = [false; 3];
+
+		// Find out if
+		for arg in self.get_arguments() {
+			let i = log_args.binary_search(&arg.get_id());
+
+			//
+			if i.is_err() {
+				break;
+			}
+
+			let i: usize = i.unwrap();
+			if log_arg_bool[i] == false {
+				log_arg_bool[i] = true
+			} else {
+				panic!(
+					"[clap_logger] ERROR: Logging Argument '{}' found more than once.",
+					arg.get_id()
+				)
+			}
+		}
+
+		self
 	}
 }

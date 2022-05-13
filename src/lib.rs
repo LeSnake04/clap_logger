@@ -8,10 +8,10 @@
 //!
 //! ## Features
 //! * Command line argument to set loglevel
-//! * No Panics
 //! * Argument can be modified
 //! * Optional: Loglevel via Environment variables
 //! * directly embedded in `clap::Command` and `clap::ArgMatches`
+//! * no panics after successful initialization
 //!
 //! ## Initialising the logger
 //! ### Base implementation:
@@ -22,48 +22,77 @@
 //!
 //! let m: clap::ArgMatches = Command::new("clap_command_test")
 //!   // add the loglevel argument
-//!  	.add_loglevel_arg()
+//!  	.add_logging_args()
 //! 	.get_matches();//!
 //!
-//! m.init_env_logger().expect("Failed to initialize logger");
+//! m.init_logger().expect("Failed to initialize logger");
 //! ```
 //! ## Status: Beta
-//! ### Finished
-//! * Feature complete (But Open for suggestions)
-//! * no panics
 //!
-//! ### Backlog
-//! * Write More tests
+//! ### Roadmap: 0.5
+//! * More tests
 //! * Complete documentation
-//! * Write more examples.
-//! * Add `clap_derive` support.,
+//! * More examples.
+//! * `clap_derive` support
+//!
+//! ## Note:
+//! 1. If you get a panic or error ending with `"Please report!"`, this is very likely because of a bug in the library.
+//! Please report the panic message on GitHub https://github.com/LeSnake04/clap_logger/issues
+//!
+//! 2. If you get a message ending with `'*'`, the message will be hidden in release builds.
+
+pub use crate::arg::{get_logging_args, ClapLogArgs};
+pub use crate::logger::init::ClapInitLogger;
+use std::fmt::Display;
 
 pub mod arg;
-pub mod init_logger;
+#[cfg(feature = "init_logger")]
+pub mod logger;
 #[cfg(test)]
 mod tests;
 
-pub use crate::arg::{get_arg, ClapLoglevelArg};
-pub use crate::init_logger::ClapInitLogger;
+#[doc(hidden)]
+pub(crate) fn print_dbg(text: impl Display) {
+	#[cfg(debug_assertions)]
+	println!("{}", text);
+}
 
 #[cfg(feature = "prelude")]
 pub mod prelude {
+	//! ```
+	//! use clap_logger::prelude::*;
+	//! ```
 	//! # Collection of imports for setting up the crate.
 	//! Also re-exports clap and log commands needed for implementation to reduce imports and dependencies.
 	//! [See start page for implementation details.][crate]
 	//! Includes
+	//! - essential modules for setting up clap_logger
 	//! - basic clap modules (like [ArgMatches][clap::ArgMatches],[Command][clap::Command] and many more)
-	//! - essential internal modules for setting up clap_logger
 	//! - logging functions and LevelFilters
-	pub use crate::arg::{get_arg, ClapLoglevelArg};
-	pub use crate::init_logger::ClapInitLogger;
+
 	pub use clap::{arg, command, Arg, ArgMatches, Command};
-	pub use log::{debug, error, info, trace, warn, LevelFilter};
+	pub use log::LevelFilter;
+	#[cfg(feature = "init_logger")]
+	pub use log4rs::Handle;
+
+	pub use crate::arg::{get_logging_args, ClapLogArgs};
+	pub use crate::log::*;
+	pub use crate::ClapInitLogger;
 }
 
 #[cfg(feature = "prelude")]
 pub mod log {
+	//! ```
+	//! use clap_logger::log::*;
+	//! ```
 	//! # Functions for logging.
 	//! This provides a simple way to import logging functions without extra dependencies.
 	pub use log::{debug, error, info, trace, warn};
+}
+
+/// Internal use
+pub(crate) fn dbgm(msg: impl Display) {
+	#[cfg(debug_assertions)]
+	print!("{}", msg);
+	println!("*")
 }

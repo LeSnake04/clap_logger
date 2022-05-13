@@ -1,3 +1,6 @@
+use clap_logger::{ClapInitLogger, ClapLogArgs};
+use log4rs::Handle;
+
 fn main() {
 	use clap_logger::prelude::*;
 
@@ -11,9 +14,15 @@ fn main() {
 				.takes_value(true)
 				.required(false),
 		)
-		// add the loglevel argument
-		.add_loglevel_arg(LevelFilter::Off)
+		// add the logging arguments
+		.add_logging_args(LevelFilter::Trace)
 		.get_matches();
 
-	m.init_env_logger().expect("Failed to initialize logger");
+	m.init_logger();
+
+	error!("Error");
+	warn!("Warn");
+	info!("Info");
+	debug!("Debug");
+	trace!("Trace")
 }
