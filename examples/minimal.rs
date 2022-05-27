@@ -24,5 +24,5 @@ fn main() {
 	warn!("Warn");
 	info!("Info");
 	debug!("Debug");
-	trace!("Trace")
+	trace!("Trace");
 }

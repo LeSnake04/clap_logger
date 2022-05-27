@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 //! # Clap Logger
 //! Simple [env_logger][env_logger] integration for [clap][clap].
 //!

@@ -1,4 +1,5 @@
-use crate::dbgm;
+use std::path::Path;
+
 use log::LevelFilter;
 use log4rs::append::console::{ConsoleAppender, ConsoleAppenderBuilder};
 use log4rs::append::file::{FileAppender, FileAppenderBuilder};
@@ -8,7 +9,9 @@ use log4rs::config::runtime::{ConfigBuilder, RootBuilder};
 use log4rs::config::{Appender, Root};
 use log4rs::encode::pattern::PatternEncoder;
 use log4rs::{init_config, Config, Handle};
-use std::path::Path;
+
+use crate::dbgm;
+use crate::logger::policy_builder::PolicyBuilder;
 
 /// TODO Doc
 pub struct ClapLoggerBuilder {
@@ -36,7 +39,7 @@ impl FileLogger {
 					.expect("Continuous file appender failed to Build"),
 			),
 			Self::Rolling(a) => Box::new(
-				a.build(path, Box::new())
+				a.build(path, Box::new(PolicyBuilder::default()))
 					.expect("Rolling file appender failed to Build"),
 			),
 		}
@@ -134,10 +137,19 @@ impl ClapLoggerBuilder {
 		let get_file_logger_cfg =
 			|cfg_expected: FileLoggerCfg, expected: Option<FileLogger>| -> Option<ConfigBuilder> {
 				if self.file_config == Some(cfg_expected) {
-					if self.file.clone() == Some(expected) {
-						Some(config.appender(
-							Appender::builder().build("stdout", Box::new(self.file.build())),
-						))
+					if self.file == Some(expected) {
+						Some(
+							config.appender(
+								Appender::builder().build(
+									"stdout",
+									Box::new(
+										self.file
+											.unwrap()
+											.build(self.file_path.expect("No Path specified")),
+									),
+								),
+							),
+						)
 					} else {
 						None
 					}
@@ -147,7 +159,7 @@ impl ClapLoggerBuilder {
 			};
 
 		let file_logger_continuous: Option<ConfigBuilder> =
-			get_file_logger_cfg(FileLoggerCfg::Continuous, FileLogger::Continuous());
+			get_file_logger_cfg(FileLoggerCfg::Continuous, Some(FileLogger::Continuous()));
 
 		let file_logger_rolling: Option<ConfigBuilder> =
 			get_file_logger_cfg(FileLoggerCfg::Rolling);
