@@ -1,86 +1,120 @@
-use clap::ArgMatches;
-use log4rs::append::console::{ConsoleAppender, ConsoleAppenderBuilder};
-use log4rs::append::file::{FileAppender, FileAppenderBuilder};
-use log4rs::append::rolling_file::{RollingFileAppender, RollingFileAppenderBuilder};
-use log4rs::config::{Appender, Root};
-use log4rs::encode::pattern::PatternEncoder;
-use log4rs::{init_config, Config, Handle};
 use std::str::FromStr;
 
+use clap::ArgMatches;
 use log::LevelFilter;
+use log4rs::Handle;
+use unwrap_or::{unwrap_ok_or, unwrap_some_or};
 
-use crate::get_logging_args::{get_loglevel_index, LEVEL_FILTERS};
+use crate::args::helper::{get_loglevel_index, LEVEL_FILTERS};
+use crate::errors::{ClapInitLoggerError as Error, ClapInitLoggerResult as Result};
 use crate::logger::builder::ClapLoggerBuilder;
 
 /// # Clap Init Logger
-/// Trait which defines the functions to [initializes the logger][crate::init_logger] or get the loglevel
-pub trait ClapInitLogger {
-	///  TODO Doc
+/// Trait which defines the functions to initializes the logger or get the loglevel
+///
+/// Made for [ArgMatches][clap::ArgMatches]
+///
+/// You need to add [ClapLogArgs][crate::ClapLogArgs] to [Command][clap::Command] use this
+pub trait ClapInitLogger
+where
+	Self: Sized,
+{
+	/// TODO: Doc
 	#[cfg(feature = "init_logger")]
-	fn init_logger(self) -> Handle
-	where
-		Self: Sized;
+	fn init_logger(&self) -> Result<Handle>;
 
-	/*#[cfg(feature = "init_logger")]
-	fn init_logger_crate_only(self) -> Self
-	where
-		Self: Sized;*/
+	/// # Init Logger Custom env
+	/// Initialize the logger while reading from custom environment variable.
+	///
+	/// *Note: Requires non-default "custom_env" feature*
+	#[cfg(feature = "custom_env")]
+	fn init_logger_custom_env(&self, custom_env: &str) -> Result<Handle>;
 
-	/// TODO Doc
-	#[cfg(feature = "from_custom_env")]
-	fn init_logger_custom_env(self, custom_env: &str) -> Handle
-	where
-		Self: Sized;
+	/// # Get loglevel
+	/// TODO: Doc
+	#[cfg(feature = "init_logger")]
+	fn get_loglevel(&self) -> Result<LevelFilter>;
+
+	/// TODO: Doc
+	#[cfg(feature = "custom_env")]
+	fn get_loglevel_custom_env(&self, custom_env: &str) -> Result<LevelFilter>;
+
+	fn build(
+		builder: fn(ClapLoggerBuilder) -> ClapLoggerBuilder,
+		 default_loglevel: LevelFilter,
+	) -> Result<Handle>;
 }
 
-impl ClapInitLogger for ArgMatches {
+impl ClapInitLogger for ArgMatches
+where
+	Self: Sized,
+{
 	#[cfg(feature = "init_logger")]
+	fn init_logger(&self) -> Result<Handle> {
+		let loglevel: LevelFilter = self.get_loglevel()?;
 
-	fn init_logger(self) -> Handle {
-		let arg_loglevel: &str = self
-			.value_of("loglevel")
-			.expect("Could not find loglevel argument. Please make sure you added the ar");
-
-		let occurrences = |id: &str| -> u64 {
-			if self.value_of(id).is_none() {
-				self.occurrences_of(id)
-			} else {
-				get_loglevel_index(LevelFilter::from_str(arg_loglevel).unwrap()) as u64
-			}
-		};
-
-		let verbose: u64 = occurrences("verbose");
-		let quiet: u64 = occurrences("quiet");
-
-		let loglevel: LevelFilter = get_loglevel(arg_loglevel, verbose, quiet, vec!["RUST_LOG"]);
-
-		/*env_logger::builder()
-		.filter_level(get_loglevel(loglevel, verbose, quiet, vec!["RUST_LOG"]))
-		.init();*/
-		ClapLoggerBuilder::new(loglevel).console_logger().init()
+		Ok(ClapLoggerBuilder::new(loglevel)
+			.add_console_logger()?
+			.init()?)
 	}
 
-	#[cfg(feature = "from_custom_env")]
-	fn init_logger_custom_env(self, custom_env: &str) -> Handle {
-		let arg_loglevel: &str = self
-			.value_of("loglevel")
-			.expect("Could not find loglevel argument. Please make sure you added the Command");
+	#[cfg(feature = "custom_env")]
+	fn init_logger_custom_env(&self, custom_env: impl Into<String>) -> Result<Handle> {
+		let loglevel: LevelFilter = self.get_loglevel_custom_env(&custom_env.into())?;
+		ClapLoggerBuilder::new(loglevel).add_console_logger().init()
+	}
+
+	fn get_loglevel(&self) -> Result<LevelFilter> {
+		let loglevel: &str = unwrap_some_or!(
+			self.value_of("loglevel"),
+			return Err(Error::CouldntFindLoglevelArg)
+		);
+
+		let occurrences = |id: &str| -> Result<u64> {
+			Ok(if self.value_of(id).is_none() {
+				self.occurrences_of(id)
+			} else {
+				get_loglevel_index(
+					LevelFilter::from_str(loglevel)
+						.map_err(|e| Error::CouldntParseLoglevel { source: e })?,
+				) as u64
+			})
+		};
+
+		let verbose: u64 = occurrences("verbose")?;
+		let quiet: u64 = occurrences("quiet")?;
+
+		get_loglevel(loglevel, verbose, quiet, vec!["RUST_LOG"])
+	}
+
+	#[cfg(feature = "custom_env")]
+	fn get_loglevel_custom_env(&self, custom_env: &str) -> Result<LevelFilter> {
+		let loglevel: &str = unwrap_some_or!(
+			self.value_of("loglevel"),
+			return Err(Error::CouldntFindLoglevelArg)
+		);
 
 		let occurrences = |id: &str| -> u64 {
 			if self.value_of("verbose").is_none() {
 				self.occurrences_of("verbose")
 			} else {
-				get_loglevel_index(LevelFilter::from_str(arg_loglevel).unwrap()) as u64
+				get_loglevel_index(LevelFilter::from_str(loglevel).unwrap()) as u64
 			}
 		};
 
 		let verbose: u64 = occurrences("verbose");
 		let quiet: u64 = occurrences("quiet");
 
-		let loglevel: LevelFilter =
-			get_loglevel_custom_env(env_loglevel_handling, verbose, quiet, custom_env);
+		Ok(get_loglevel_custom_env(
+			loglevel, verbose, quiet, custom_env,
+		)?)
+	}
 
-		ClapLoggerBuilder::new(loglevel).console_logger().init()
+	fn build(
+		builder: fn(ClapLoggerBuilder) -> ClapLoggerBuilder,
+		default_loglevel: LevelFilter,
+	) -> Result<Handle> {
+		Ok(builder(ClapLoggerBuilder::new(default_loglevel)).init()?)
 	}
 }
 
@@ -90,7 +124,7 @@ fn start_logger(loglevel: LevelFilter) -> Handle {
 		.encoder(Box::new(PatternEncoder::new(
 			"{l} – {d(%Y-%M-%d – %H-%m-%S-%2F)} – {m}\n",
 		)))
-		.build();
+		;
 	let config: Config = Config::builder()
 		.appender(Appender::builder().build("stdout", Box::new(stdout)))
 		.build(Root::builder().appender("stdout").build(loglevel))
@@ -140,7 +174,7 @@ fn get_loglevel(
 	verbose: u64,
 	quiet: u64,
 	env_vars: Vec<&str>,
-) -> LevelFilter {
+) -> Result<LevelFilter> {
 	let filter_index: usize = verbose.clamp(0, 5).saturating_sub(quiet) as usize;
 
 	/*println!(
@@ -151,8 +185,7 @@ fn get_loglevel(
 	let loglevel: &str = LEVEL_FILTERS[filter_index];
 
 	let mut loglevel_env: Option<String> = None;
-	for i in 0..env_vars.len() {
-		let var: &str = env_vars[i];
+	for var in env_vars {
 		if loglevel_env == None {
 			loglevel_env = match std::env::var(var) {
 				Ok(r) => Some(r),
@@ -161,20 +194,20 @@ fn get_loglevel(
 		}
 	}
 
-	LevelFilter::from_str(loglevel).unwrap_or(
-		LevelFilter::from_str(default_loglevel)
-			.expect("Could not parse loglevel. If you get this error, please Report!"),
-	)
+	Ok(LevelFilter::from_str(loglevel).unwrap_or(unwrap_ok_or!(
+		LevelFilter::from_str(default_loglevel),
+		e,
+		return Err(Error::CouldntParseLoglevel { source: e })
+	)))
 }
 
-/// # Get LogLevel Env
-///
-#[cfg(feature = "from_custom_env")]
+#[cfg(feature = "custom_env")]
+#[doc(hidden)]
 fn get_loglevel_custom_env(
 	loglevel: &str,
 	verbose: u64,
 	quiet: u64,
 	custom_env: &str,
-) -> LevelFilter {
+) -> Result<LevelFilter> {
 	get_loglevel(loglevel, verbose, quiet, vec![custom_env, "RUST_LOG"])
 }

@@ -1,5 +1,4 @@
-use clap_logger::{ClapInitLogger, ClapLogArgs};
-use log4rs::Handle;
+use clap_logger::prelude::*;
 
 fn main() {
 	use clap_logger::prelude::*;
@@ -18,7 +17,7 @@ fn main() {
 		.add_logging_args(LevelFilter::Trace)
 		.get_matches();
 
-	m.init_logger();
+	m.init_logger().unwrap();
 
 	error!("Error");
 	warn!("Warn");

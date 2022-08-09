@@ -1,178 +1,204 @@
-use std::path::Path;
-
+#![allow(unused_imports)]
 use log::LevelFilter;
-use log4rs::append::console::{ConsoleAppender, ConsoleAppenderBuilder};
+use log4rs::append::console::ConsoleAppender;
 use log4rs::append::file::{FileAppender, FileAppenderBuilder};
+use log4rs::append::rolling_file::policy::compound::CompoundPolicy;
+use log4rs::append::rolling_file::policy::Policy;
 use log4rs::append::rolling_file::{RollingFileAppender, RollingFileAppenderBuilder};
-use log4rs::append::Append;
-use log4rs::config::runtime::{ConfigBuilder, RootBuilder};
-use log4rs::config::{Appender, Root};
+use log4rs::config::runtime::{ConfigBuilder, LoggerBuilder, RootBuilder};
+use log4rs::config::{Appender, Logger, Root};
 use log4rs::encode::pattern::PatternEncoder;
 use log4rs::{init_config, Config, Handle};
+use unwrap_or::unwrap_some_or;
 
-use crate::dbgm;
-use crate::logger::policy_builder::PolicyBuilder;
+use crate::errors::{ClapLoggerBuilderError as Error, ClapLoggerBuilderResult as Result};
+use crate::PolicyBuilder;
 
-/// TODO Doc
+/**
+# Logger Builder
+Configure the logger
+
+TODO: example
+*/
 pub struct ClapLoggerBuilder {
 	loglevel: LevelFilter,
-	console: Option<ConsoleAppenderBuilder>,
-	file: Option<FileLogger>,
-	file_path: Option<&'static str>,
-	file_config: Option<FileLoggerCfg>,
+	console: Option<ConsoleAppender>,
+	file: Option<FileAppenderBuilder>,
+	file_rolling: Option<RollingFileAppenderBuilder>,
+	policy: Option<CompoundPolicy>,
+	file_path: Option<String>,
+	file_type: Option<FileLoggerType>,
 }
 
-/// TODO Doc
-#[derive(PartialEq, Debug, Clone)]
-pub enum FileLogger {
-	/// TODO Doc
-	Continuous(FileAppenderBuilder),
-	/// TODO Doc
-	Rolling(RollingFileAppenderBuilder),
-}
+/**
+# File Logger Type
+Defines the type of the logfile
++ Continuous
 
-impl FileLogger {
-	fn build(self, path: impl AsRef<Path>) -> Box<dyn Append> {
-		match self {
-			Self::Continuous(a) => Box::new(
-				a.build(path)
-					.expect("Continuous file appender failed to Build"),
-			),
-			Self::Rolling(a) => Box::new(
-				a.build(path, Box::new(PolicyBuilder::default()))
-					.expect("Rolling file appender failed to Build"),
-			),
-		}
-	}
-}
+Always attach message to the Same file
++ Rolling
 
-/// TODO Doc
-#[derive(PartialEq, Debug, Copy, Clone)]
-pub enum FileLoggerCfg {
-	/// TODO Doc
+Roll files on certain conditions
+*/
+#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+pub enum FileLoggerType {
+	/// Always attach message to the Same file
 	Continuous,
-	/// TODO Doc
+	/// Roll files on certain conditions
 	Rolling,
 }
 
 impl ClapLoggerBuilder {
-	/// TODO Doc
+	/// TODO: Docbuilder
 	pub fn new(loglevel: LevelFilter) -> Self {
 		Self {
 			loglevel,
 			console: None,
 			file: None,
 			file_path: None,
-			file_config: None,
+			file_type: None,
+			policy: None,
+			file_rolling: None,
 		}
 	}
+
 	#[cfg(feature = "console_logger")]
-	/// TODO Doc
-	pub fn custom_console_appender(&mut self, appender: ConsoleAppenderBuilder) -> &Self {
+	/// # Custom Console Appender
+	/// *For advanced users only!*
+	/// Manually set the [ConsoleAppender][log4rs::append::console::ConsoleAppender]
+	pub fn custom_console_appender(&mut self, appender: ConsoleAppender) -> &Self {
 		self.console = Some(appender);
 		self
 	}
 
 	#[cfg(feature = "console_logger")]
-	/// TODO Doc
-	pub fn console_logger(&mut self) -> &Self {
-		if let Some(_) = self.console {
-			panic!("clap_logger: LoggerBuilder: Console logger already added")
+	/// TODO: Doc
+	pub fn add_console_logger(&mut self) -> Result<&mut Self> {
+		if self.console.is_some() {
+			return Err(Error::ConsoleAppenderAlreadyExists);
 		}
 
 		self.console = Some(
-			ConsoleAppender::builder().encoder(Box::new(PatternEncoder::new(
-				"{l} – {d(%Y-%M-%d – %H-%m-%S-%2F)} – {m}\n",
-			))),
+			ConsoleAppender::builder()
+				.encoder(Box::new(PatternEncoder::new(
+					"{l} – {d(%Y-%M-%d – %H-%m-%S-%2F)} – {m}\n",
+				)))
+				.build(),
 		);
-		self
+		Ok(self)
 	}
 
 	#[cfg(feature = "logfile")]
-	/// TODO Doc
-	pub fn custom_file_appender(&mut self, appender: FileLogger) -> &Self {
+	/// # Custom Rolling File Appender
+	/// For advanced users only!*
+
+	/// Manually set the [FileAppender][log4rs::append::file::FileAppender]
+	/// ## Inputs
+	/// + appender: [FileAppenderBuilder][log4rs::append::file::FileAppender]
+	/// *You Specify a FileAppenderBuilder so the the path can be specified like normal.*
+	pub fn custom_file_appender(&mut self, appender: FileAppenderBuilder) -> Result<&Self> {
+		/*if self.file_rolling.is_some() {
+		return Err(Error::FileAppenderAlreadyExists);
+		}*/
+		self.file_type = Some(FileLoggerType::Continuous);
 		self.file = Some(appender);
-		self
+		Ok(self)
+	}
+
+	/// # Custom Rolling File Appender
+	/// *For advanced users only!*
+	///
+	/// Manually set the [RollingFileAppender][log4rs::append::rolling_file::RollingFileAppender]
+	/// ## Arguments
+	/// + [appender][log4rs::append::rolling_file::RollingFileAppender]: You Specify a RollingFileAppenderBuilder so the the path can be specified like normal.
+	pub fn custom_rolling_file_appender(
+		&mut self,
+		appender: RollingFileAppenderBuilder,
+	) -> Result<&Self> {
+		/*if self.file.is_some() {
+		return Err(Error::FileAppenderAlreadyExists);
+		}*/
+		self.file_type = Some(FileLoggerType::Rolling);
+		self.file_rolling = Some(appender);
+		Ok(self)
 	}
 
 	#[cfg(feature = "logfile")]
-	/// TODO Doc
-	pub fn file_logger(&mut self, config: FileLoggerCfg) -> &Self {
-		if let Some(_) = self.file {
-			panic!("clap_logger: LoggerBuilder: Console logger already added")
+	/// TODO: Doc
+	pub fn file_logger(&mut self, logger_type: FileLoggerType) -> Result<&mut Self> {
+		if self.file.is_some() {
+			return Err(Error::CantUseRollingAndContinuous);
 		}
 
-		self.file = Some(match config {
-			FileLoggerCfg::Continuous => {
-				FileLogger::Continuous(FileAppender::builder().encoder(Box::new(
-					PatternEncoder::new("{l} – {d(%Y-%M-%d – %H-%m-%S-%2F)} – {m}\n"),
-				)))
-			}
+		fn rolling_file() -> Result<RollingFileAppenderBuilder> {
+			todo!("TODO: Write RollingFileAppender")
+		}
 
-			FileLoggerCfg::Rolling => {
-				FileLogger::Rolling(RollingFileAppender::builder().encoder(Box::new(
-					PatternEncoder::new("{l} – {d(%Y-%M-%d – %H-%m-%S-%2F)} – {m}\n"),
-				)))
+		fn file() -> Result<FileAppenderBuilder> {
+			todo!("TODO: Write FileAppender")
+		}
+
+		match logger_type {
+			FileLoggerType::Continuous => {
+				self.file = Some(file()?);
+				self.file_type = Some(FileLoggerType::Continuous);
 			}
-		});
-		self
+			FileLoggerType::Rolling => {
+				self.file_rolling = Some(rolling_file()?);
+				self.file_type = Some(FileLoggerType::Continuous);
+			}
+		}
+		Ok(self)
 	}
-	/// TODO Doc
-	pub fn init(&self) -> Handle {
-		match (&self.file, &self.console) {
-			(&None, &None) => panic!(
-				"clap_logger: LoggerBuilder: you have to add at least one appender before .init()"
-			),
-			_ => (),
+	pub(crate) fn init(&self) -> Result<Handle> {
+		if self.file_type.is_none() && self.console.is_none() {
+			return Err(Error::NoAppenderGiven);
 		}
 
+		#[allow(unused_mut)]
 		let mut config: ConfigBuilder = Config::builder();
+		#[allow(unused_mut)]
 		let mut root: RootBuilder = Root::builder();
 
-		if let Some(a) = &self.console {
-			config.appender(Appender::builder().build("stdout", Box::new(a.build())));
-			root.appender("stdout");
+		if self.console.is_some() {
+			// FIXME: Why TF are trait bounds not satisfied??
+			&config.appender(
+				Appender::builder().build("stdout", Box::new(&self.clone().console.unwrap())),
+			);
+			&root.appender("stdout");
 		}
 
-		let get_file_logger_cfg =
-			|cfg_expected: FileLoggerCfg, expected: Option<FileLogger>| -> Option<ConfigBuilder> {
-				if self.file_config == Some(cfg_expected) {
-					if self.file == Some(expected) {
-						Some(
-							config.appender(
-								Appender::builder().build(
-									"stdout",
-									Box::new(
-										self.file
-											.unwrap()
-											.build(self.file_path.expect("No Path specified")),
-									),
-								),
-							),
-						)
-					} else {
-						None
-					}
-				} else {
-					None
-				}
+		#[allow(unused)]
+		if let Some(f) = &self.file_type {
+			// FIXME: Why TF are trait bounds not satisfied??
+			match f {
+				FileLoggerType::Continuous => &config.appender(Appender::builder().build(
+					"stderr",
+					Box::new(self.file.ok_or(Error::FileAppenderNotFound)?),
+				)),
+				FileLoggerType::Rolling => &config.appender(
+					Appender::builder().build(
+						"stderr",
+						Box::new(
+							self.file_rolling
+								.map(|a| {
+									a.build(
+										self.file_path.ok_or(Error::FilePathNotFound)?,
+										self.policy.ok_or(Error::NoPolicyGiven)?,
+									)
+								})
+								.ok_or(Error::FileAppenderNotFound)?,
+						),
+					),
+				),
 			};
-
-		let file_logger_continuous: Option<ConfigBuilder> =
-			get_file_logger_cfg(FileLoggerCfg::Continuous, Some(FileLogger::Continuous()));
-
-		let file_logger_rolling: Option<ConfigBuilder> =
-			get_file_logger_cfg(FileLoggerCfg::Rolling);
-
-		if (file_logger_rolling, file_logger_continuous) == (None, None) {
-			root.appender("stdout");
+			&root.appender("stderr");
 		}
-
 		init_config(
 			config
 				.build(root.build(self.loglevel))
-				.expect("failed to initialize config"),
+				.map_err(|e| Error::BuildFailed { source: e })?,
 		)
-		.expect("Failed to initialize Logger")
+		.map_err(|e| Error::InitFailed { source: e })
 	}
 }

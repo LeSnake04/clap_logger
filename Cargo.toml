@@ -1,29 +1,37 @@
 [package]
 name = "clap_logger"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2021"
 license = "AGPL-3.0"
 authors = ["LeSnake <dev@lesnake@posteo.de>"]
 description = "Easy to use, yet powerfull logger integration for clap"
-publish = true
+publish = false
 repository = "https://github.com/LeSnake04/clap_logger/"
-categories = ["development-tools","development-tools::debugging"]
-keywords = ["log", "clap","pretty_env_logger"]
+categories = ["development-tools", "development-tools::debugging"]
+keywords = ["log", "clap", "log4rs", "logfile"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-clap = "3.1"
+clap = "3.2"
 log = "0.4"
-log4rs = { version = "1.1.1", optional = true, features = ["console_appender", "file_appender", "rolling_file_appender"]}
+anyhow = "1.0"
+snafu = "0.7"
+unwrap_or = "1.0"
+
+[dependencies.log4rs]
+version = "1.1"
+optional = true
+features = ["console_appender", "file_appender", "rolling_file_appender"]
+
+[dev-dependencies]
+trybuild = "1.0"
 
 [features]
-default = ["minimal", "prelude", "logfile"]
+default = ["minimal", "prelude"]
 minimal = ["init_logger", "console_logger"]
-logfile_only = ["prelude", "init_logger", "logfile"]
-full = ["from_custom_env", "default"]
-from_custom_env = []
-console_logger = ["dep:log4rs"]
-logfile = ["dep:log4rs"]
+full = ["custom_env", "default", "logfile"]
+custom_env = []
+console_logger = ["init_logger","dep:log4rs"]
+logfile = ["dep:log4rs", "init_logger"]
 prelude = []
 init_logger = ["dep:log4rs"]
