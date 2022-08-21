@@ -15,6 +15,9 @@ max_line_length = 100
 [{*.bash,*.sh,*.zsh}]
 indent_style = space
 
+[{*.stdout,*.stderr}]
+indent_style = space
+
 [{*.markdown,*.md}]
 indent_size = 4
 tab_width = 3

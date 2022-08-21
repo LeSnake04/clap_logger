@@ -1,6 +1,6 @@
 # Clap Logger
 
-Simple [log4rs](https://www.docs.rs/log4rs) integration for [clap](https://www.docs.rs/clap).
+Simple [fern](https://www.docs.rs/fern) integration for [clap](https://www.docs.rs/clap).
 
 This crate provides a simple way to allow the user to set the log level via a command line argument.
 It's directly implemented in clap, so it feels very naturally to use.
@@ -15,12 +15,12 @@ Please note this crate does not support `clap_derive` yet.
    -  quiet: decrease loglevel (decreases with each use)
 -  Argument can be safely modified
 -  Loglevel via `RUST_LOG` or optionally custom Environment variables
--  directly embedded in [`clap::Command`] and [`clap::ArgMatches`]
+-  directly embedded in `clap::Command` and `clap::ArgMatches`
 -  no panics
 -  Direct integration with `Clap::Command` and `Clap::ArgMatches`
 -  Re-Exports basic clap and log items in order to allow you to minimize dependencies
 -  just 2 extra lines for a minimal implementation.
--  allows you to customize the log4rs config if you want to, using a simple builder or completely custom appenders.
+-  allows you to fully customize the config if you want with a simple builder.
 -  You can also just use this crate to get the loglevel and use you own logger.
 
 # [Changelog](./CHANGELOG.md)

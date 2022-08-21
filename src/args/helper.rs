@@ -1,6 +1,8 @@
 use clap::{Arg, PossibleValue};
 use log::LevelFilter;
 
+use crate::errors::{ClapInitLoggerError as Error, ClapInitLoggerResult as Result};
+
 #[doc(hidden)]
 pub(crate) fn loglevel_possible_values<'a>() -> [PossibleValue<'a>; 6] {
 	[
@@ -13,6 +15,7 @@ pub(crate) fn loglevel_possible_values<'a>() -> [PossibleValue<'a>; 6] {
 	]
 }
 
+#[doc(hidden)]
 pub fn loglevel<'a>(default_loglevel: LevelFilter) -> Arg<'a> {
 	Arg::new("loglevel")
 		.long("loglevel")
@@ -20,6 +23,18 @@ pub fn loglevel<'a>(default_loglevel: LevelFilter) -> Arg<'a> {
 		.default_value(default_loglevel.as_str())
 		.help("Set the loglevel")
 		.long_help("Set the loglevel. TRACE is the most verbose and OFF the least verbose")
+		.value_parser(loglevel_possible_values())
+		.ignore_case(true)
+}
+
+#[doc(hidden)]
+pub fn loglevel_file<'a>(default_loglevel_file: LevelFilter) -> Arg<'a> {
+	Arg::new("loglevel-file")
+		.long("loglevel-file")
+		.required(false)
+		.default_value(default_loglevel_file.as_str())
+		.help("Set the loglevel for the file logger")
+		.long_help("Set the loglevel for the file logger. TRACE is the most verbose and OFF the least verbose")
 		.possible_values(loglevel_possible_values())
 }
 
@@ -28,33 +43,23 @@ pub(crate) static LEVEL_FILTERS: [&str; 6] = ["OFF", "ERROR", "WARN", "INFO", "D
 
 #[doc(hidden)]
 #[allow(unused)]
-pub(crate) fn get_loglevel_difference(default_loglevel: LevelFilter) -> (usize, usize) {
-	let default_loglevel_pos: usize = LEVEL_FILTERS
-		.binary_search(&default_loglevel.as_str())
-		.unwrap_or({
-			println!("clap_logger: Failed to get position of default loglevel, using Warn. Please Report!(This message will be hidden in release builds)");
-			2
-		})
-		.clamp(0, 5);
-
-	(
+pub(crate) fn get_loglevel_difference(default_loglevel: LevelFilter) -> Result<(usize, usize)> {
+	let default_loglevel_pos: usize = get_loglevel_index(default_loglevel)?;
+	Ok((
 		LEVEL_FILTERS
 			.len()
 			.clamp(0, 5)
 			.saturating_sub(default_loglevel_pos),
 		default_loglevel_pos.saturating_sub(1),
-	)
+	))
 }
 
 #[doc(hidden)]
-pub(crate) fn get_loglevel_index(default_loglevel: LevelFilter) -> usize {
+pub(crate) fn get_loglevel_index(default_loglevel: LevelFilter) -> Result<usize> {
 	LEVEL_FILTERS
 		.binary_search(&default_loglevel.as_str())
-		.unwrap_or({
-			println!("Verbose/Silent: Failed to get position of default loglevel, using Warn");
-			2
-		})
-		.clamp(0, 5)
+		.map(|r| r.clamp(0, 5))
+		.map_err(|_| Error::CouldntGetLoglevelIndex)
 }
 
 #[doc(hidden)]

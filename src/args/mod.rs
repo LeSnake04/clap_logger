@@ -1,3 +1,5 @@
+//! Module for creating and managing arguments for logging
+
 pub use builder::ClapLogArgsBuilder;
 pub use log_args::ClapLogArgs;
 

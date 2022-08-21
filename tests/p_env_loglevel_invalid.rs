@@ -1,10 +1,11 @@
-use anyhow::Result;
+#![cfg(feature = "custom_env")]
+use anyhow::{Context, Result};
 use std::env;
 
-use crate::prelude::*;
+use clap_logger::prelude::*;
 
-#[test]
-fn env_loglevel_invalid() -> Result<()> {
+#[allow(dead_code)]
+fn main() -> Result<()> {
 	env::set_var("TEST_LOGLEVEL", "abc");
 
 	let m: ArgMatches = Command::new("clap_command_test")
@@ -12,10 +13,8 @@ fn env_loglevel_invalid() -> Result<()> {
 		.add_logging_args(LevelFilter::Info)
 		.get_matches_from(["clap_logger", "--loglevel", "OFF"]);
 
-	m.init_logger_custom_env(EnvLogLevelHandling::OverwriteDefault(
-		"TEST_LOGLEVEL".to_string(),
-	))
-	.cause("Failed to init logger");
+	m.init_logger_custom_env("TEST_LOGLEVEL")
+		.context("Failed to init logger")?;
 
 	trace!("trace");
 	debug!("debug");

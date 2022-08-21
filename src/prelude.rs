@@ -12,9 +12,9 @@ Includes
 - logging functions and LevelFilters
  */
 pub use clap::{arg, command, Arg, ArgMatches, Command};
+pub use fern::Dispatch;
 pub use log::LevelFilter;
-#[cfg(feature = "init_logger")]
-pub use log4rs::Handle;
+
 
 pub use crate::log::*;
 pub use crate::ClapInitLogger;

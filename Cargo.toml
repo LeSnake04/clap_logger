@@ -16,22 +16,18 @@ clap = "3.2"
 log = "0.4"
 anyhow = "1.0"
 snafu = "0.7"
-unwrap_or = "1.0"
-
-[dependencies.log4rs]
-version = "1.1"
-optional = true
-features = ["console_appender", "file_appender", "rolling_file_appender"]
+chrono = {version="0.4", optional = true}
+fern = {version = "0.6", optional = true}
 
 [dev-dependencies]
 trybuild = "1.0"
 
 [features]
-default = ["minimal", "prelude"]
+default = ["minimal", "prelude","full"]
 minimal = ["init_logger", "console_logger"]
 full = ["custom_env", "default", "logfile"]
 custom_env = []
-console_logger = ["init_logger","dep:log4rs"]
-logfile = ["dep:log4rs", "init_logger"]
+console_logger = ["init_logger","dep:fern"]
+logfile = ["init_logger"]
 prelude = []
-init_logger = ["dep:log4rs"]
+init_logger = ["dep:fern", "dep:chrono"]

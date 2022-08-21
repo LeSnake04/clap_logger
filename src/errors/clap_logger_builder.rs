@@ -1,11 +1,10 @@
-//! Errors occurring in [LoggerBuilder][crate::logger::builder]
-
 use log::SetLoggerError;
-use log4rs::config::runtime::ConfigErrors;
 use snafu::Snafu;
-
+use std::io::Error as IoError;
+/// Result returned in [LoggerBuilder][crate::logger::builder]
 pub type ClapLoggerBuilderResult<T> = Result<T, ClapLoggerBuilderError>;
 
+/// Errors occurring in [LoggerBuilder][crate::logger::builder]
 #[derive(Snafu, Debug)]
 pub enum ClapLoggerBuilderError {
 	#[snafu(display("No console appender given. Please Report!"))]
@@ -14,24 +13,12 @@ pub enum ClapLoggerBuilderError {
 	NoAppenderGiven,
 	#[snafu(display("No Compound policy given. Please Specify a CompundPolicy"))]
 	NoPolicyGiven,
-	#[snafu(display("File appender already exists."))]
-	FileAppenderAlreadyExists,
-	#[snafu(display("You cant have both rolling and continuous file appender."))]
-	CantUseRollingAndContinuous,
-	#[snafu(display("Console Appender already set"))]
-	ConsoleAppenderAlreadyExists,
 	#[snafu(display("Could not find File appender based on Type given. Please Report!"))]
 	FileAppenderNotFound,
 	#[snafu(display("File Path not set. Please Report!"))]
-	FilePathNotFound,
-	#[snafu(display("Logger init failed: {source}"))]
-	InitFailed {
-		#[snafu(source)]
-		source: SetLoggerError,
-	},
-	#[snafu(display("Logger build failed: {source}"))]
-	BuildFailed {
-		#[snafu(source)]
-		source: ConfigErrors,
-	},
+	FilePathNotSet,
+	#[snafu(display("Failed to create logfile: "))]
+	LogFileErrror { source: IoError },
+	#[snafu(display("Failed to initialiaze logge because {source}"))]
+	InitFailed { source: SetLoggerError },
 }
