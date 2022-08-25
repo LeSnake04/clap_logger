@@ -15,7 +15,6 @@ pub use clap::{arg, command, Arg, ArgMatches, Command};
 pub use fern::Dispatch;
 pub use log::LevelFilter;
 
-
 pub use crate::log::*;
 pub use crate::ClapInitLogger;
 pub use crate::ClapLogArgs;

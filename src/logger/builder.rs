@@ -128,7 +128,6 @@ impl ClapLoggerBuilder {
 
 	#[cfg(feature = "init_logger")]
 	pub(crate) fn init(self) -> Result<()> {
-		// HACK: This nested match is nessesary because Dispatch doesn't implement clone
 		match (
 			match self.get_logger_builder()? {
 				(None, None) => return Err(Error::NoAppenderGiven),

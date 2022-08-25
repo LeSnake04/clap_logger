@@ -9,11 +9,9 @@
 #![allow(rustdoc::private_doc_tests)]
 #![doc = include_str!("lib.md")]
 
-
 pub(crate) use crate::args::helper;
 pub use crate::args::{ClapLogArgs, ClapLogArgsBuilder};
 pub use crate::logger::{ClapInitLogger, ClapLoggerBuilder};
-
 
 pub mod args;
 pub mod errors;

@@ -1,5 +1,5 @@
 #![cfg(feature = "custom_env")]
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::env;
 
 use clap_logger::prelude::*;
@@ -13,13 +13,11 @@ fn main() -> Result<()> {
 		.add_logging_args(LevelFilter::Info)
 		.get_matches_from(["clap_logger", "--loglevel", "OFF"]);
 
-	m.init_logger_custom_env("TEST_LOGLEVEL")
-		.context("Failed to init logger")?;
+	m.init_logger_custom_env("TEST_LOGLEVEL")?;
 
-	trace!("trace");
-	debug!("debug");
-	info!("info");
-	warn!("warn");
-	error!("error");
+	assert_eq!(
+		m.get_loglevel_custom_env("TEST_LOGLEVEL")?,
+		LevelFilter::Off
+	);
 	Ok(())
 }

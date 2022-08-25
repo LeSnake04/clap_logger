@@ -129,7 +129,7 @@ fn get_loglevel(
 
 	let mut loglevel_env: Option<String> = None;
 	for var in env_vars {
-		if loglevel_env == None {
+		if loglevel_env.is_none() {
 			loglevel_env = match std::env::var(var) {
 				Ok(r) => Some(r),
 				Err(_) => None,

@@ -1,8 +1,8 @@
 mod p_clap_command;
 #[cfg(feature = "custom_env")]
-mod p_env_loglevel_invalid;
+mod p_cenv_loglevel_invalid;
 #[cfg(feature = "custom_env")]
-mod p_env_loglevel_valid;
+mod p_cenv_loglevel_valid;
 mod p_verbose_overuse;
 
 #[test]
