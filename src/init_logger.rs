@@ -51,7 +51,7 @@ impl Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Error::NoLogLevelSupplied => write!(f, "No loglevel specified. Please Report."),
-			Error::CouldNotParseLogLevel(e) => write!(f,"Failed to parse loglevel: {}", e),
+			Error::CouldNotParseLogLevel(e) => write!(f, "Failed to parse loglevel: {}", e),
 		}
 	}
 }
