@@ -10,7 +10,7 @@ pub fn get_loglevel_arg<'help>(default_loglevel: log::LevelFilter) -> clap::Arg<
 		.default_value(default_loglevel.as_str())
 		.help("Set the loglevel")
 		.long_help("Set the loglevel. TRACE is the most verbose and OFF the least verbose")
-		.possible_values(["OFF", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"])
+		.possible_values(["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"])
 }
 
 /// # CLap LogLevel arg

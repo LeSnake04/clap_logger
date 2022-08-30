@@ -14,7 +14,7 @@ fn main() {
 				.required(false),
 		)
 		// add the loglevel argument
-		.add_loglevel_arg(LevelFilter::Off)
+		.add_loglevel_arg(LevelFilter::Warn)
 		.get_matches();
 
 	m.init_logger().expect("Failed to initialize logger");
