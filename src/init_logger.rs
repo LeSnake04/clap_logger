@@ -1,5 +1,7 @@
 #[cfg(feature = "env")]
 use std::env::var as env_var;
+use std::error::Error as StdError;
+use std::fmt::Display;
 use std::str::FromStr;
 
 /// # Clap Logger Result
@@ -44,6 +46,17 @@ pub enum EnvLogLevelHandling {
 	///
 	OverwriteArgument(String),
 }
+
+impl Display for Error {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Error::NoLogLevelSupplied => write!(f, "No loglevel specified. Please Report."),
+			Error::CouldNotParseLogLevel(e) => write!(f,"Failed to parse loglevel: {}", e),
+		}
+	}
+}
+
+impl StdError for Error {}
 
 #[cfg(feature = "env")]
 pub enum PrintEnvWarning {
